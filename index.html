@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>QR Quick</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: sans-serif;
+    background: #111;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #home { text-align: center; padding: 24px; }
+  h1 { font-size: 26px; margin-bottom: 24px; }
+  button, label.btn {
+    display: block;
+    width: 260px;
+    padding: 16px;
+    margin: 10px auto;
+    border: none;
+    border-radius: 16px;
+    font-size: 16px;
+    background: #8ab4ff;
+    color: #000;
+    cursor: pointer;
+  }
+  .ghost { background: #222; color: #fff; }
+  input[type=file] { display: none; }
+  #qrScreen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #qrScreen img {
+    width: 92vw;
+    height: auto;
+    max-height: 92vh;
+    object-fit: contain;
+  }
+  #closeBtn {
+    position: absolute;
+    bottom: 20px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 12px;
+    background: #111;
+    color: #fff;
+    font-size: 15px;
+  }
+</style>
+</head>
+<body>
+
+<div id="home">
+  <h1>QR Quick</h1>
+  <label class="btn" for="fileInput" id="pickLabel">QR select করুন</label>
+  <input type="file" id="fileInput" accept="image/*">
+  <button id="showBtn" style="display:none;">QR দেখুন</button>
+  <button id="changeBtn" class="ghost" style="display:none;">QR change করুন</button>
+</div>
+
+<div id="qrScreen">
+  <img id="qrImg" alt="QR code">
+  <button id="closeBtn">Back</button>
+</div>
+
+<script>
+  const fileInput = document.getElementById('fileInput');
+  const pickLabel = document.getElementById('pickLabel');
+  const showBtn = document.getElementById('showBtn');
+  const changeBtn = document.getElementById('changeBtn');
+  const qrScreen = document.getElementById('qrScreen');
+  const qrImg = document.getElementById('qrImg');
+  const closeBtn = document.getElementById('closeBtn');
+
+  function refreshUI() {
+    const saved = localStorage.getItem('qrImage');
+    const hasQr = !!saved;
+    pickLabel.style.display = hasQr ? 'none' : 'block';
+    showBtn.style.display = hasQr ? 'block' : 'none';
+    changeBtn.style.display = hasQr ? 'block' : 'none';
+  }
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        localStorage.setItem('qrImage', reader.result);
+      } catch (err) {
+        alert('ছবিটা অনেক বড়, ছোট screenshot দিন।');
+      }
+      refreshUI();
+    };
+    reader.readAsDataURL(file);
+    fileInput.value = '';
+  });
+
+  changeBtn.addEventListener('click', () => fileInput.click());
+
+  let wakeLock = null;
+
+  async function openQr() {
+    qrImg.src = localStorage.getItem('qrImage');
+    qrScreen.style.display = 'flex';
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (err) {}
+  }
+
+  async function closeQr() {
+    qrScreen.style.display = 'none';
+    try {
+      if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch (err) {}
+  }
+
+  showBtn.addEventListener('click', openQr);
+  closeBtn.addEventListener('click', closeQr);
+
+  refreshUI();
+</script>
+
+</body>
+</html>
